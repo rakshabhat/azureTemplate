@@ -1,0 +1,75 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "hostingPlanName": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "Name of the hosting plan to use in Azure."
+            }
+        },
+        "webSiteName": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "Name of the Azure Web app to create."
+            }
+        }
+    },
+    "variables": {
+    "defaultApiVersion": "2015-05-01-preview",
+    "clusterApiVersion": "2015-03-01-preview",  
+    "subnetName": "Subnet",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks','kafka-vnet'))]",
+    "hostingPlanName": "webServiceHosting",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables('subnetName'))]"
+    
+  },
+    "resources": [
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[parameters('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "HostingPlan"
+            },
+            "properties": {
+                "name": "[parameters('hostingPlanName')]"
+            }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[parameters('webSiteName')]",
+            "type": "Microsoft.Web/sites",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]": "Resource",
+                "displayName": "Website"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('webSiteName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2015-08-01",
+                    "name": "web",
+                    "type": "config",
+                    "dependsOn": [
+                        "[concat('Microsoft.Web/sites/', parameters('webSiteName'))]"
+                    ],
+                    "properties": {
+                        "javaVersion": "1.8",
+                        "javaContainer": "TOMCAT",
+                        "javaContainerVersion": "8.0"
+                    }
+                }
+            ]
+        }
+    ]
+}
